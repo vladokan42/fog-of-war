@@ -1,16 +1,73 @@
-# fog_of_war
+# 🗺️ Fog of War — Карта с открытием территории
 
-A new Flutter project.
+> **📥 Скачать APK:** [fog-of-war-v0.1.0.apk](https://github.com/vladokan42/fog-of-war/releases/download/v0.1.0/fog-of-war-v0.1.0.apk)
+>
+> Версия: **v0.1.0** · Размер: **92 MB** (debug) · Android 7+
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🌫️ О чём игра?
 
-A few resources to get you started if this is your first Flutter project:
+Приложение превращает реальный мир в карту из стратегий.  
+Ты ходишь по городу — а карта открывается только там, где ты прошёл.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Всё, что осталось за пределами твоего пути, скрыто **туманом войны** 🌫️
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🎮 Как работает
+
+1. 🗺️ Открывается карта OpenStreetMap (бесплатно, без регистрации)
+2. 📍 Включи GPS — приложение отслеживает твоё местоположение
+3. 👣 Куда ты прошёл — туман рассеивается в радиусе 50 метров
+4. 💾 Прогресс сохраняется — закроешь приложение, откроешь снова, карта остаётся
+5. 🔄 Кнопка сброса — начать заново
+
+## 📸 Скриншоты
+
+*(добавлю, когда сделаем)*
+
+## 🛠️ Технологии
+
+| Компонент | Что использует |
+|---|---|
+| **Flutter** 3.29.2 | Фреймворк |
+| **flutter_map** 8.3.0 | Карта (OpenStreetMap) |
+| **geolocator** | GPS / геолокация |
+| **shared_preferences** | Сохранение прогресса |
+| **Kotlin** 2.2.0 | Android-сборка |
+
+## 🧱 Структура проекта
+
+```
+lib/
+├── main.dart                    # Точка входа
+├── models/
+│   └── cleared_tile.dart        # Сетка открытых тайлов
+├── screens/
+│   └── map_screen.dart          # Карта + туман + GPS
+└── services/
+    └── storage_service.dart     # Сохранение/загрузка
+```
+
+## 🚀 Как собрать самому
+
+```bash
+git clone https://github.com/vladokan42/fog-of-war.git
+cd fog-of-war
+flutter pub get
+flutter build apk --release
+```
+
+APK будет в `build/app/outputs/flutter-apk/`.
+
+## 🧠 Что можно добавить
+
+- [ ] 🔘 Переключение радиуса открытия (25/50/100 м)
+- [ ] 🏆 Статистика: сколько км прошёл, сколько % карты открыто
+- [ ] 🎨 Свой цвет тумана
+- [ ] 📸 Скриншоты открытой карты
+- [ ] 💾 Экспорт/импорт прогресса
+- [ ] 🌙 Тёмная тема
+
+---
+
+*Сделано Владом и OpenClaw 🤖*
