@@ -34,54 +34,63 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initMap() async {
-    // Load saved data
+    // Load saved tiles immediately
     final saved = await _storage.loadTiles();
     final grid = ClearedTileGrid();
     grid.fromJson(saved.toJson());
     
+    if (!mounted) return;
     setState(() {
       _clearedGrid.fromJson(grid.toJson());
       _tileCount = _clearedGrid.count;
     });
 
-    // Get current position
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      return;
-    }
+    // Show map immediately, try GPS in background
+    setState(() => _isLoading = false);
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.deniedForever || permission == LocationPermission.denied) {
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        return;
+    // Safety timeout for GPS
+    Future.delayed(const Duration(seconds: 10), () {
+      if (_isTracking) return;
+      if (_currentPosition == null && mounted) {
+        _mapController.move(_defaultCenter, 15.0);
       }
-    }
+    });
 
     try {
+      // Request permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      
+      if (permission == LocationPermission.deniedForever || 
+          permission == LocationPermission.denied ||
+          !await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) {
+          _mapController.move(_defaultCenter, 15.0);
+        }
+        return;
+      }
+
+      // Try to get position with timeout
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 8),
         ),
       );
-      if (!mounted) return;
       
-      setState(() {
-        _currentPosition = LatLng(pos.latitude, pos.longitude);
-        _isLoading = false;
-      });
-
-      _mapController.move(_currentPosition!, 16.0);
+      if (!mounted) return;
+      final latlng = LatLng(pos.latitude, pos.longitude);
+      setState(() => _currentPosition = latlng);
+      _mapController.move(latlng, 16.0);
       _revealArea(pos.latitude, pos.longitude);
       _startTracking();
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      // GPS failed, show default location
+      if (mounted) {
+        _mapController.move(_defaultCenter, 15.0);
+      }
     }
   }
 

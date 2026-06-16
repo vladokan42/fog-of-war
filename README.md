@@ -1,8 +1,8 @@
 # 🗺️ Fog of War — Карта с открытием территории
 
-> **📥 Скачать APK:** [fog-of-war-v0.1.0.apk](https://github.com/vladokan42/fog-of-war/releases/download/v0.1.0/fog-of-war-v0.1.0.apk)
+> **📥 Скачать APK:** [fog-of-war-v0.1.1.apk](https://github.com/vladokan42/fog-of-war/releases/download/v0.1.1/fog-of-war-v0.1.1.apk)
 >
-> Версия: **v0.1.0** · Размер: **92 MB** (debug) · Android 7+
+> Версия: **v0.1.1** · Размер: **92 MB** (debug) · Android 7+
 
 ---
 
