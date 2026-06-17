@@ -108,6 +108,7 @@ class _MapScreenState extends State<MapScreen> {
 
       if (!mounted) return;
       setState(() {
+        _currentPosition = latlng;
         _tileCount = _clearedGrid.count;
       });
     } catch (e) {
@@ -146,10 +147,12 @@ class _MapScreenState extends State<MapScreen> {
       }
       _lastTrackedPosition = latlng;
 
+      _revealArea(pos.latitude, pos.longitude);
+
       setState(() {
         _currentPosition = latlng;
+        _tileCount = _clearedGrid.count;
       });
-      _revealArea(pos.latitude, pos.longitude);
       
       // Only move map if follow mode is on
       if (_followMode) {
@@ -337,6 +340,21 @@ class _MapScreenState extends State<MapScreen> {
                           ],
                         ),
                       ),
+                    ),
+                  ),
+
+                // My Location FAB
+                if (_currentPosition != null)
+                  Positioned(
+                    bottom: MediaQuery.of(context).padding.bottom + 24,
+                    right: 16,
+                    child: FloatingActionButton.small(
+                      heroTag: 'locate',
+                      backgroundColor: const Color(0xFF1A1A2E),
+                      onPressed: () {
+                        _mapController.move(_currentPosition!, 16.0);
+                      },
+                      child: const Icon(Icons.my_location, size: 20),
                     ),
                   ),
               ],
