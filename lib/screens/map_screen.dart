@@ -1,4 +1,3 @@
-import 'dart:ui' show ClipOp;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -424,47 +423,50 @@ class _FogPainter extends CustomPainter {
       ..color = const Color(0xF0040612)
       ..style = PaintingStyle.fill;
 
-    // Build list of cleared screen rectangles
-    final clearedRects = <Rect>[];
-
     final projection = mapController.camera;
     final bounds = projection.visibleBounds;
-    final latStep = (bounds.north - bounds.south) / 60;
-    final lngStep = (bounds.east - bounds.west) / 60;
 
-    // Collect saved cleared tiles on screen
-    for (double lat = bounds.south; lat <= bounds.north; lat += latStep) {
-      for (double lng = bounds.west; lng <= bounds.east; lng += lngStep) {
+    if (bounds.north <= bounds.south || bounds.east <= bounds.west) return;
+
+    // Grid size for sampling cleared tiles on screen
+    final cols = 120;
+    final rows = 240;
+    final latStep = (bounds.north - bounds.south) / rows;
+    final lngStep = (bounds.east - bounds.west) / cols;
+    final tileW = size.width / cols;
+    final tileH = size.height / rows;
+
+    // Iterate over visible grid. Draw fog only where NOT cleared.
+    // Cleared tiles are left transparent → map shows through.
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < cols; c++) {
+        final lat = bounds.south + (r + 0.5) * latStep;
+        final lng = bounds.west + (c + 0.5) * lngStep;
+
         if (grid.isCleared(lat, lng)) {
-          final point = projection.latLngToScreenOffset(LatLng(lat, lng));
-          clearedRects.add(Rect.fromCircle(center: point, radius: 8.0));
+          // Skip — transparent, map shows through
+          continue;
         }
+        canvas.drawRect(
+          Rect.fromLTWH(c * tileW, r * tileH, tileW + 1, tileH + 1),
+          fogPaint,
+        );
       }
     }
 
-    // Add current position clearing circle (as rect approximation)
+    // Also clear around current position (over-draw the fog tiles)
     if (currentPosition != null) {
       final pos = projection.latLngToScreenOffset(currentPosition!);
       final radiusPx = _metersToPixels(revealRadius, projection, currentPosition!);
       if (radiusPx > 0) {
-        clearedRects.add(Rect.fromCircle(center: pos, radius: radiusPx));
+        // Punch a transparent circle through the fog grid
+        final clearPaint = Paint()
+          ..color = const Color(0x00000000)
+          ..blendMode = BlendMode.dstOut
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(pos, radiusPx, clearPaint);
       }
     }
-
-    canvas.save();
-
-    // Start with full-screen clip
-    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    // Subtract each cleared area from the clip region
-    for (final rect in clearedRects) {
-      canvas.clipRect(rect, clipOp: ClipOp.difference);
-    }
-
-    // Draw fog — only appears where NOT cleared (clipped out)
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), fogPaint);
-
-    canvas.restore();
   }
 
   double _metersToPixels(double meters, MapCamera cam, LatLng at) {
