@@ -99,10 +99,17 @@ class _MapScreenState extends State<MapScreen> {
       
       if (!mounted) return;
       final latlng = LatLng(pos.latitude, pos.longitude);
-      setState(() => _currentPosition = latlng);
-      _mapController.move(latlng, 16.0);
+
+      // Сначала обновляем грид, потом камеру — чтобы map move
+      // не триггернул ребилд до обновления тумана
       _revealArea(pos.latitude, pos.longitude);
-      _startTracking();
+      _mapController.move(latlng, 16.0);
+      _startTracking(initialPosition: latlng);
+
+      if (!mounted) return;
+      setState(() {
+        _tileCount = _clearedGrid.count;
+      });
     } catch (e) {
       // GPS failed, show default location
       if (mounted) {
@@ -111,9 +118,10 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _startTracking() {
+  void _startTracking({LatLng? initialPosition}) {
     _isTracking = true;
-    _lastTrackedPosition = _currentPosition;
+    _lastTrackedPosition = initialPosition;
+    // _currentPosition is set via setState by the caller
     Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
