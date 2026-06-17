@@ -4,6 +4,8 @@ import 'package:fog_of_war/models/cleared_tile.dart';
 
 class StorageService {
   static const _key = 'cleared_tiles';
+  static const _keyDistance = 'total_distance';
+  static const _keyRadius = 'reveal_radius';
 
   Future<void> saveTiles(ClearedTileGrid grid) async {
     final prefs = await SharedPreferences.getInstance();
@@ -29,5 +31,26 @@ class StorageService {
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
+    await prefs.remove(_keyDistance);
+  }
+
+  Future<void> saveDistance(double meters) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyDistance, meters);
+  }
+
+  Future<double> loadDistance() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_keyDistance) ?? 0.0;
+  }
+
+  Future<void> saveRadius(double radius) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyRadius, radius);
+  }
+
+  Future<double> loadRadius() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_keyRadius) ?? 50.0;
   }
 }
