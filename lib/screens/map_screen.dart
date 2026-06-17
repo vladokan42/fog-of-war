@@ -1,3 +1,4 @@
+import 'dart:ui' show ClipOp;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -419,50 +420,51 @@ class _FogPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
 
-    // Dark, almost opaque fog — only ~5% of map visible through uncleared areas
     final fogPaint = Paint()
       ..color = const Color(0xF0040612)
       ..style = PaintingStyle.fill;
 
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), fogPaint);
+    // Build list of cleared screen rectangles
+    final clearedRects = <Rect>[];
 
-    // Clear holes using dstOut blend mode
-    final clearPaint = Paint()
-      ..blendMode = BlendMode.dstOut
-      ..color = Colors.transparent
-      ..style = PaintingStyle.fill;
-
-    // Sample cleared tiles visible on screen (performance sampling)
     final projection = mapController.camera;
     final bounds = projection.visibleBounds;
-    
     final latStep = (bounds.north - bounds.south) / 60;
     final lngStep = (bounds.east - bounds.west) / 60;
 
+    // Collect saved cleared tiles on screen
     for (double lat = bounds.south; lat <= bounds.north; lat += latStep) {
       for (double lng = bounds.west; lng <= bounds.east; lng += lngStep) {
         if (grid.isCleared(lat, lng)) {
           final point = projection.latLngToScreenOffset(LatLng(lat, lng));
-          canvas.drawCircle(point, 8.0, clearPaint);
+          clearedRects.add(Rect.fromCircle(center: point, radius: 8.0));
         }
       }
     }
 
-    // Clear around current position
+    // Add current position clearing circle (as rect approximation)
     if (currentPosition != null) {
       final pos = projection.latLngToScreenOffset(currentPosition!);
       final radiusPx = _metersToPixels(revealRadius, projection, currentPosition!);
       if (radiusPx > 0) {
-        canvas.drawCircle(
-          pos,
-          radiusPx,
-          Paint()
-            ..blendMode = BlendMode.dstOut
-            ..color = Colors.transparent
-            ..style = PaintingStyle.fill,
-        );
+        clearedRects.add(Rect.fromCircle(center: pos, radius: radiusPx));
       }
     }
+
+    canvas.save();
+
+    // Start with full-screen clip
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    // Subtract each cleared area from the clip region
+    for (final rect in clearedRects) {
+      canvas.clipRect(rect, clipOp: ClipOp.difference);
+    }
+
+    // Draw fog — only appears where NOT cleared (clipped out)
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), fogPaint);
+
+    canvas.restore();
   }
 
   double _metersToPixels(double meters, MapCamera cam, LatLng at) {
