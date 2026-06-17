@@ -28,7 +28,7 @@ class ClearedTile {
 
 /// Simple tile grid for efficient storage
 class ClearedTileGrid {
-  final double gridSize = 0.0003; // ~30 meters at equator
+  final double gridSize = 0.00005; // ~5 meters at equator
   final Set<String> _cleared = {};
 
   String _key(double lat, double lng) {
