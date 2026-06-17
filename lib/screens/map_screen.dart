@@ -33,13 +33,11 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _lastTrackedPosition;
   final ClearedTileGrid _clearedGrid = ClearedTileGrid();
   bool _isLoading = true;
-  double _revealRadius = 50.0;
+  final double _revealRadius = 10.0;
   bool _isTracking = false;
   bool _followMode = false;
   int _tileCount = 0;
   double _totalDistanceMeters = 0.0;
-
-  static const _radiusOptions = [25.0, 50.0, 100.0];
 
   // Moscow center as default
   static const _defaultCenter = LatLng(55.7558, 37.6173);
@@ -56,14 +54,12 @@ class _MapScreenState extends State<MapScreen> {
     final grid = ClearedTileGrid();
     grid.fromJson(saved.toJson());
     final savedDistance = await _storage.loadDistance();
-    final savedRadius = await _storage.loadRadius();
     
     if (!mounted) return;
     setState(() {
       _clearedGrid.fromJson(grid.toJson());
       _tileCount = _clearedGrid.count;
       _totalDistanceMeters = savedDistance;
-      _revealRadius = savedRadius;
     });
 
     // Show map immediately, try GPS in background
@@ -165,128 +161,6 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {});
   }
 
-  void _showRadiusSelector() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A1A2E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Радиус открытия',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ..._radiusOptions.map((r) {
-                  final isSelected = _revealRadius == r;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _revealRadius = r;
-                        });
-                        _storage.saveRadius(r);
-                        Navigator.pop(ctx);
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.indigo.withValues(alpha: 0.3)
-                              : Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? Colors.indigoAccent
-                                : Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isSelected
-                                  ? Icons.radio_button_checked
-                                  : Icons.radio_button_off,
-                              color: isSelected
-                                  ? Colors.indigoAccent
-                                  : Colors.white54,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 14),
-                            Text(
-                              '${r.toInt()} м',
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.white70,
-                                fontSize: 16,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _resetAll() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Сбросить прогресс?',
-          style: TextStyle(color: Colors.white)),
-        content: const Text('Вся открытая карта и статистика будут удалены.',
-          style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Сбросить',
-              style: TextStyle(color: Colors.redAccent)),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    await _storage.clear();
-    if (!mounted) return;
-    setState(() {
-      _clearedGrid.fromJson([]);
-      _tileCount = 0;
-      _totalDistanceMeters = 0.0;
-    });
-  }
-
   @override
   void dispose() {
     _isTracking = false;
@@ -346,13 +220,15 @@ class _MapScreenState extends State<MapScreen> {
                   ],
                 ),
 
-                // Fog overlay
+                // Fog overlay — IgnorePointer lets touches pass through to the map
                 Positioned.fill(
-                  child: FogOverlay(
-                    grid: _clearedGrid,
-                    currentPosition: _currentPosition,
-                    revealRadius: _revealRadius,
-                    mapController: _mapController,
+                  child: IgnorePointer(
+                    child: FogOverlay(
+                      grid: _clearedGrid,
+                      currentPosition: _currentPosition,
+                      revealRadius: _revealRadius,
+                      mapController: _mapController,
+                    ),
                   ),
                 ),
 
@@ -407,7 +283,7 @@ class _MapScreenState extends State<MapScreen> {
                           style: const TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                         const SizedBox(width: 12),
-                        // Follow mode indicator
+                        // Follow mode toggle
                         GestureDetector(
                           onTap: () => setState(() => _followMode = !_followMode),
                           child: Icon(
@@ -422,35 +298,6 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ],
                     ),
-                  ),
-                ),
-
-                // Bottom controls
-                Positioned(
-                  bottom: MediaQuery.of(context).padding.bottom + 16,
-                  right: 16,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Reset
-                      FloatingActionButton.small(
-                        heroTag: 'reset',
-                        backgroundColor: const Color(0xFF1A1A2E),
-                        onPressed: _resetAll,
-                        child: const Icon(Icons.delete_outline, size: 20),
-                      ),
-                      const SizedBox(height: 10),
-                      // Radius selector
-                      FloatingActionButton.small(
-                        heroTag: 'radius',
-                        backgroundColor: const Color(0xFF1A1A2E),
-                        onPressed: _showRadiusSelector,
-                        child: Text(
-                          '${_revealRadius.toInt()}м',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
 
